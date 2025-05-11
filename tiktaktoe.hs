@@ -1,6 +1,6 @@
 import PlayingGames
 
-data Cell = Empty | X | O deriving (Eq, Show)
+data Cell = Empty | X | O deriving (Ord, Eq, Show)
 type Board = [Cell]
 
 initialState :: Board
