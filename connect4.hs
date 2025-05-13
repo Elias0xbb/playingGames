@@ -1,11 +1,13 @@
-import PlayingGamesAB (Player(..), getBestMovesWithDepth)
-import System.IO (hFlush, stdout)
+import PlayingGamesAB (Player(..), alphaBetaMax, evaluate)
 import qualified Data.Map as Map
+import System.IO (hFlush, stdout)
 
 -- Datenstrukturen
 data Cell = Empty | X | O deriving (Eq, Ord, Show)
 type Column = [Cell]
 type Board = [Column]
+
+type Cache = Map.Map Board (String, Int)
 
 -- Spielparameter
 rows, cols, connectN :: Int
@@ -71,14 +73,16 @@ utility board
   | isWin board O = -1
   | otherwise     = 0
 
--- Beste KI-Aktion berechnen, inkl. Fallback
+-- Beste KI-Aktion berechnen (mit Cache)
 bestMove :: Int -> Board -> Board
-bestMove depth board =
-  case moves of
-    (x:_) -> x
-    []    -> board  -- Fallback: kein Zug möglich
+bestMove depth board = case moves of
+  (x:_) -> x
+  []    -> board
   where
-    (_, moves) = getBestMovesWithDepth nextStates finished utility depth MaxPlayer board
+    successors = nextStates board MaxPlayer
+    scored = [ (s, snd (evaluate finished utility nextStates s (alphaBetaMax finished utility nextStates) (-1) 1 Map.empty)) | s <- successors ]
+    bestScore = maximum (map snd scored)
+    moves = [s | (s, val) <- scored, val == bestScore]
 
 -- Visualisierung
 showCell :: Cell -> Char
@@ -111,9 +115,9 @@ makeMove board col player =
   where
     Just newCol = dropToken (board !! col) (playerToCell player)
 
--- Spielschleife mit Suchtiefe
-gameLoopWithDepth :: Board -> Player -> Int -> IO ()
-gameLoopWithDepth board player maxDepth = do
+-- Spielschleife
+gameLoop :: Board -> Player -> Int -> IO ()
+gameLoop board player maxDepth = do
   printBoard board
   if finished board
     then case utility board of
@@ -124,11 +128,11 @@ gameLoopWithDepth board player maxDepth = do
       MinPlayer -> do
         col <- getHumanMove board
         let board' = makeMove board col MinPlayer
-        gameLoopWithDepth board' MaxPlayer maxDepth
+        gameLoop board' MaxPlayer maxDepth
       MaxPlayer -> do
         putStrLn "Die KI denkt nach..."
         let board' = bestMove maxDepth board
-        gameLoopWithDepth board' MinPlayer maxDepth
+        gameLoop board' MinPlayer maxDepth
 
 -- Hauptfunktion
 main :: IO ()
@@ -141,4 +145,4 @@ main = do
         [(n, "")] | n > 0 -> n
         _ -> 5
   putStrLn $ "KI sucht bis Tiefe " ++ show maxDepth ++ ". Viel Erfolg!"
-  gameLoopWithDepth initialState MinPlayer maxDepth
+  gameLoop initialState MinPlayer maxDepth
