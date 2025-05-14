@@ -9,7 +9,6 @@ module PlayingGames(
 import qualified Data.Map as Map
 import Data.List (foldl')
 
-data Player = MaxPlayer | MinPlayer deriving (Ord, Eq, Show)
 
 
 value :: Ord s =>
