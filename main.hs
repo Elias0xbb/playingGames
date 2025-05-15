@@ -5,11 +5,12 @@ module PlayingGames(
     alphaBetaMax,
     alphaBetaMin,
     evaluate,
+    pdEvaluate,
 ) where
 
 import qualified Data.Map as Map
 import qualified Data.Heap as Hp
-import GameDef (Player(..), State, initialState, finished, utility, nextStates, heuristic)
+import GameDefC4 (Player(..), State, initialState, finished, utility, nextStates, heuristic)
 
 
 -- Memoization cache for alpha-beta pruning with progressive deepening.
@@ -46,7 +47,7 @@ alphaBetaMax cache s limit alpha beta
     loop cache heap a = case Hp.view heap of
         Nothing -> (cache, a)
         Just ((v, sn), heap') -> let
-            (cache', val) = evaluate cache sn (pred limit) (alphaBetaMin cache) a beta
+            (cache', val) = evaluate cache sn (pred limit) alphaBetaMin a beta
             in if val >= beta
                then (cache', val)
                else loop cache' heap' (max a val)
@@ -74,7 +75,7 @@ alphaBetaMin cache s limit alpha beta
     loop cache heap b = case Hp.view heap of
         Nothing -> (cache, b)
         Just ((v, sn), heap') -> let
-            (cache', val) = evaluate cache sn (pred limit) (alphaBetaMax cache) alpha b
+            (cache', val) = evaluate cache sn (pred limit) alphaBetaMax alpha b
             in if val <= alpha
                then (cache', val)
                else loop cache' heap' (min b val)
@@ -83,7 +84,7 @@ alphaBetaMin cache s limit alpha beta
 evaluate :: Cache -- cache
             -> State -- current state
             -> Int -- depth limit
-            -> (State -> Int -> Float -> Float -> (Cache, Float)) -- evaluation function
+            -> (Cache -> State -> Int -> Float -> Float -> (Cache, Float)) -- evaluation function
             -> Float -- alpha
             -> Float -- beta
             -> (Cache, Float) -- (cache, value)
@@ -95,16 +96,16 @@ evaluate cache s limit eval alpha beta =
                       then (cache, v)
                       else let 
                         beta' = min beta v
-                        (cache', v') = eval s limit alpha beta'
+                        (cache', v') = eval cache s limit alpha beta'
                         in (storeCache cache' s limit alpha beta' v', v')
             CF_GTE -> if beta <= v
                       then (cache, v)
                       else let 
                         alpha' = max alpha v
-                        (cache', v') = eval s limit alpha' beta
+                        (cache', v') = eval cache s limit alpha' beta
                         in (storeCache cache' s limit alpha' beta v', v')
         Nothing ->
-            let (cache', v') = eval s limit alpha beta
+            let (cache', v') = eval cache s limit alpha beta
             in (storeCache cache' s limit alpha beta v', v')
     where
         storeCache cache s limit alpha beta v =
@@ -113,3 +114,17 @@ evaluate cache s limit eval alpha beta =
                           else if v < beta 
                                then CF_EQ 
                                else CF_GTE, v) cache
+
+
+pdEvaluate :: Cache -- cache
+              -> State -- current state
+              -> Int -- depth limit
+              -> (Cache -> State -> Int -> Float -> Float -> (Cache, Float)) -- evaluation function
+              -> (Cache, Float) -- (cache, value)
+pdEvaluate cache s limit eval = pdLoop cache 0
+  where
+    pdLoop cache depth = let
+        (cache', v) = evaluate cache s depth eval (-1) 1
+        in if depth >= limit then (cache', v)
+           else if v == (-1) || v == 1 then (cache', v)
+                else pdLoop cache' (succ depth)
