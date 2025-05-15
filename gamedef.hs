@@ -1,8 +1,8 @@
-{-|
 {-
 
 AUTHORS : Elias Kiene and Jan Hampel
 DATE    : 2025-05-15
+
 
 Module GameDef
 =============
@@ -12,20 +12,21 @@ It provides all necessary types and functions to play Connect 4 (/N) with the Pl
 
 Exported functions and types:
 
-- Player(..): The player type, representing the two players (MaxPlayer and MinPlayer).
-- State: Type alias for the board state.
-- nextStates: Generates all possible next board states for a given player.
-- finished: Checks if the game is finished (win or draw occurred).
-- isWin: Checks if a given player has won.
-- isDraw: Checks if the game is a draw.
-- utility: Returns the utility value of a board as described in Prof. Stroetmann's AI lecture.
-- initialState: The initial empty board state.
-- heuristic: Estimates the value of a non-terminal board state.
-- getHumanMove: Prompts the human player for a valid move.
-- makeMove: Applies a move for a player to the board.
-- initGame: Initializes the game and prompts for AI search depth.
-- dispState: Displays the board in a human-readable format.
--}-}
+- Player(..)      -> The player type, representing the two players (MaxPlayer and MinPlayer).
+- State: Type     -> alias for the board state.
+- nextStates      -> Generates all possible next board states for a given player.
+- finished        -> Checks if the game is finished (win or draw occurred).
+- isWin           -> Checks if a given player has won.
+- isDraw          -> Checks if the game is a draw.
+- utility         -> Returns the utility value of a board as described in Prof. Stroetmann's AI lecture.
+- initialState    -> The initial empty board state.
+- heuristic       -> Estimates the value of a non-terminal board state.
+- getHumanMove    -> Prompts the human player for a valid move.
+- makeMove        -> Applies a move for a player to the board.
+- initGame        -> Initializes the game and prompts for AI search depth.
+- dispState       -> Displays the board in a human-readable format.
+
+-}
 
 module GameDef(
     Player(..),
