@@ -1,3 +1,32 @@
+{-|
+{-
+
+AUTHORS : Elias Kiene and Jan Hampel
+DATE    : 2025-05-15
+
+Module GameDef
+=============
+This module implements the game logic for Connect 4 (Connect N), including the board representation, 
+move generation, win/draw detection, utility and heuristic evaluation, and user interaction functions. 
+It provides all necessary types and functions to play Connect 4 (/N) with the PlayingGames module.
+
+Exported functions and types:
+
+- Player(..): The player type, representing the two players (MaxPlayer and MinPlayer).
+- State: Type alias for the board state.
+- nextStates: Generates all possible next board states for a given player.
+- finished: Checks if the game is finished (win or draw occurred).
+- isWin: Checks if a given player has won.
+- isDraw: Checks if the game is a draw.
+- utility: Returns the utility value of a board as described in Prof. Stroetmann's AI lecture.
+- initialState: The initial empty board state.
+- heuristic: Estimates the value of a non-terminal board state.
+- getHumanMove: Prompts the human player for a valid move.
+- makeMove: Applies a move for a player to the board.
+- initGame: Initializes the game and prompts for AI search depth.
+- dispState: Displays the board in a human-readable format.
+-}-}
+
 module GameDefC4(
     Player(..),
     State,
@@ -11,6 +40,7 @@ module GameDefC4(
     getHumanMove,
     makeMove,
     initGame,
+    dispState,
 ) where
 
 
@@ -112,6 +142,43 @@ utility board
   | isWin board MinPlayer = -1.0
   | otherwise     = 0.0
 
+
+-- Simple heuristic function for guessing / estimating the value of a non-terminal state.
+-- Every (connectN-1) X's forming a connectN-long line together with an empty cell
+-- increment the heuristic by +0.1 while every (connectN-1) O's forming a connectN-long line
+-- together with an empty cell decrement the heuristic by -0.1.
+heuristic :: Board -> Float
+heuristic board = sum [scoreLine line | line <- allLines board]
+  where
+    scoreLine :: [Cell] -> Float
+    scoreLine cells
+      | length cells < connectN = 0
+      | otherwise = sum [scoreWindow window | window <- windows connectN cells]
+
+    scoreWindow :: [Cell] -> Float
+    scoreWindow window
+      | count X == (connectN-1) && count Empty == 1 = 0.1
+      | count O == (connectN-1) && count Empty == 1 = -0.1
+      | otherwise = 0
+      where
+        count c = length (filter (== c) window)
+
+    -- Get all possible lines (horizontal, vertical, diagonal) of length >= connectN
+    allLines :: Board -> [[Cell]]
+    allLines b = horiz ++ vert ++ diag1 ++ diag2
+      where
+        horiz = [[b !! x !! y | x <- [i..i+connectN-1]] | y <- [0..rows-1], i <- [0..cols-connectN]]
+        vert  = [[b !! x !! y | y <- [j..j+connectN-1]] | x <- [0..cols-1], j <- [0..rows-connectN]]
+        diag1 = [[b !! (i+k) !! (j+k) | k <- [0..connectN-1]] | i <- [0..cols-connectN], j <- [0..rows-connectN]]
+        diag2 = [[b !! (i+k) !! (j-k) | k <- [0..connectN-1], j-k >= 0] | i <- [0..cols-connectN], j <- [connectN-1..rows-1]]
+
+    -- Sliding window of size n
+    windows :: Int -> [a] -> [[a]]
+    windows n xs
+      | length xs < n = []
+      | otherwise = take n xs : windows n (tail xs)
+
+
 -- String-representation of cells for printing the board
 showCell :: Cell -> String
 showCell Empty = ".|"
@@ -125,8 +192,8 @@ showCell O     = "O|"
 -- The board is printed in a grid format
 -- with the columns numbered from 0 to 6
 -- for ease of move-selection.
-printBoard :: Board -> IO ()
-printBoard board = do
+dispState :: Board -> IO ()
+dispState board = do
     putStrLn "+-------------+"
     mapM_ (putStrLn . ("|" ++) . concatMap showCell) (reverse (transpose board))
     putStrLn "+-+-+-+-+-+-+-+"
@@ -135,11 +202,6 @@ printBoard board = do
         transpose :: [[a]] -> [[a]]
         transpose ([]:_) = []
         transpose x = map head x : transpose (map tail x)
-
-
--- Heuristic function for guessing / estimating the value of a non-terminal state.
-heuristic :: Board -> Float
-heuristic b = 0.0
 
 
 -- Repeatedly prompt player for a move until a valid move is entered.
@@ -156,15 +218,11 @@ getHumanMove board = do
 
 
 -- Applies a move to the board by placing the respective player's token in the specified column.
--- Prints the new board after making the move.
-makeMove :: Board -> Int -> Player -> IO Board
-makeMove board col player = do
-    let newCol = case dropToken (board !! col) (playerToCell player) of
-                    Just nc -> nc
-                    Nothing -> board !! col -- should not happen if move is valid
-        newBoard = take col board ++ [newCol] ++ drop (col + 1) board
-    printBoard newBoard
-    return newBoard
+makeMove :: Board -> Int -> Player -> Board
+makeMove board col player =
+  take col board ++ [newCol] ++ drop (col + 1) board
+  where
+    Just newCol = dropToken (board !! col) (playerToCell player)
 
 -- Initializes the game by printing welcome message,
 -- prompting for the progressive deepening depth limit
@@ -178,7 +236,7 @@ initGame = do
     putStrLn ""
     putStrLn $ "Please enter the maximum search depth for the AI (recommended 3-8): "
     maxDepth <- getMaxDepth
-    printBoard initialState
+    dispState initialState
     return maxDepth
   where
     getMaxDepth :: IO Int

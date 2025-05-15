@@ -6,11 +6,26 @@ module PlayingGames(
     alphaBetaMin,
     evaluate,
     pdEvaluate,
+    main,
 ) where
 
+import System.Random (mkStdGen, random)
 import qualified Data.Map as Map
 import qualified Data.Heap as Hp
-import GameDefC4 (Player(..), State, initialState, finished, utility, nextStates, heuristic)
+import GameDefC4 (
+    Player(..), 
+    State, 
+    initialState, 
+    finished, 
+    utility, 
+    nextStates, 
+    heuristic, 
+    dispState, 
+    makeMove, 
+    getHumanMove, 
+    isWin,
+    isDraw,
+    initGame,)
 
 
 -- Memoization cache for alpha-beta pruning with progressive deepening.
@@ -128,3 +143,63 @@ pdEvaluate cache s limit eval = pdLoop cache 0
         in if depth >= limit then (cache', v)
            else if v == (-1) || v == 1 then (cache', v)
                 else pdLoop cache' (succ depth)
+
+
+bestMove :: Cache -- cache
+            -> Int -- depth limit
+            -> Int -- random state
+            -> State -- current state
+            -> Player
+            -> (Cache, State)
+bestMove cache limit randIdx s p = let
+    (cache', bestVal) = pdEvaluate cache s limit (if p == MaxPlayer then alphaBetaMax else alphaBetaMin)
+    sns = nextStates s p
+    (cache'', nextVs) = getNextVals cache' sns
+    bestMoves = [sn | (sn, v) <- zip sns nextVs, v == bestVal]
+    in (cache'', bestMoves !! (randIdx `mod` length bestMoves))
+  where
+    getNextVals cache [] = (cache, [])
+    getNextVals cache (sn:sns) = let
+        (cache', v) = evaluate cache sn (pred limit) (if p == MaxPlayer then alphaBetaMin else alphaBetaMax) (-1) 1
+        (cache'', vs) = getNextVals cache' sns
+        in (cache'', v:vs)
+
+findWinner :: State -> Maybe Player
+findWinner s = 
+    if isWin s MaxPlayer then Just MaxPlayer
+        else if isWin s MinPlayer then Just MinPlayer
+    else Nothing
+
+
+playHumanTurn :: Int -> Cache -> Int -> State -> IO (Maybe Player)
+playHumanTurn depthLimit cache rng s = do
+    humanMove <- getHumanMove s
+    let s' = makeMove s humanMove MaxPlayer
+    dispState s'
+    print $ heuristic s'
+    if finished s' then
+        return (findWinner s')
+    else
+        playAiTurn depthLimit cache (fst $ random $ mkStdGen rng) s'
+
+playAiTurn :: Int -> Cache -> Int -> State -> IO (Maybe Player)
+playAiTurn depthLimit cache rng s = do
+    putStrLn "Calculating move..."
+    let (cache', s') = bestMove cache depthLimit rng s MinPlayer
+    dispState s'
+    print $ heuristic s'
+    if finished s' then
+        return (findWinner s')
+    else
+        playHumanTurn depthLimit cache' rng s'
+
+
+
+main :: IO ()
+main = do
+    depthLimit <- initGame
+    winner <- playHumanTurn depthLimit Map.empty 42 initialState
+    putStrLn $ case winner of 
+        Just MaxPlayer -> "You win! :D"
+        Just MinPlayer -> "You lose! :("
+        Nothing -> "It's a draw! :|"
