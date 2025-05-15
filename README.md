@@ -39,7 +39,7 @@ Ensure that you have Haskell and the required tools installed. You will need the
    ```bash
    ghc main.hs playinggames.hs gamedef.hs
    ```
-    Note that, depending on your haskell installation, you might have to manually install the modules random, containers and heap and possibly specify the `-package containers` and `-package heap` flags when compiling.
+    Note that, depending on your haskell installation, you might have to manually install the modules `random`, `containers` and `heap` and possibly specify the `-package containers` and `-package heap` flags when compiling.
 
 2. This will compile the Haskell files and create an executable `main.exe` or `main.out`.
 
@@ -48,7 +48,7 @@ Ensure that you have Haskell and the required tools installed. You will need the
 To start the game, run the following command in your terminal:
 
 ```bash
-.\main.out
+.\main
 ```
 or
 ```powershell
