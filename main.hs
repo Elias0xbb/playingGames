@@ -12,7 +12,7 @@ module PlayingGames(
 import System.Random (mkStdGen, random)
 import qualified Data.Map as Map
 import qualified Data.Heap as Hp
-import GameDefC4 (
+import GameDef (
     Player(..), 
     State, 
     initialState, 
