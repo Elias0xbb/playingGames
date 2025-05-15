@@ -29,8 +29,7 @@ Ensure that you have Haskell and the required tools installed. You will need the
 2. Clone this repository to your local machine:
 
    ```bash
-   git clone <repository-url>
-   cd <project-folder>
+   git clone https://github.com/Elias0xbb/playingGames.git
    ```
 
 ### Building the Project
